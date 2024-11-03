@@ -14,7 +14,7 @@ APlayerChar::APlayerChar()
 	PlayerCamComp->SetupAttachment(GetMesh(), "head");
 
 	// Rotate character along with controller/camera
-	PlayerCamComp->bUsePawnControlRotation = false;
+	PlayerCamComp->bUsePawnControlRotation = true;
 }
 
 // Called when the game starts or when spawned
