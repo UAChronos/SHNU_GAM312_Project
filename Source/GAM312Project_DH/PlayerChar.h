@@ -5,6 +5,8 @@
 #include "CoreMinimal.h"
 #include "Camera/CameraComponent.h"
 #include "GameFramework/Character.h"
+#include "Kismet/GameplayStatics.h"
+#include "Resource_M.h"
 #include "PlayerChar.generated.h"
 
 UCLASS()
@@ -27,6 +29,42 @@ public:
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
+	// Camera to be attachted to player character
+	UPROPERTY(VisibleAnywhere)
+	UCameraComponent* PlayerCamComp;
+
+	// Player stats
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Player Stats")
+	float Health = 100.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Player Stats")
+	float Hunger = 100.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Player Stats")
+	float Stamina = 100.0f;
+
+	// Player resources
+	UPROPERTY(EditAnywhere, Category = "Resources")
+	int Wood;
+
+	UPROPERTY(EditAnywhere, Category = "Resources")
+	int Stone;
+
+	UPROPERTY(EditAnywhere, Category = "Resources")
+	int Berry;
+
+	// Array of resources player has
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Resources")
+	TArray<int> ResourcesArray;
+
+	// Array of names for resources player has
+	UPROPERTY(EditAnywhere, Category = "Resources")
+	TArray<FString> ResourcesNameArray;
+
+	// Hit marker decal
+	UPROPERTY(EditAnywhere, Category = "HitMarker")
+	UMaterialInterface* hitDecal;
+
 	// Movement functions
 	UFUNCTION()
 	void MoveForward(float axisValue);
@@ -44,7 +82,20 @@ public:
 	UFUNCTION()
 	void FindObject();
 
-	// Camera to be attachted to player character
-	UPROPERTY(VisibleAnywhere)
-	UCameraComponent* PlayerCamComp;
+	// Stats related functions
+	UFUNCTION(BlueprintCallable)
+	void SetHealth(float ammount);
+
+	UFUNCTION(BlueprintCallable)
+	void SetHunger(float ammount);
+
+	UFUNCTION(BlueprintCallable)
+	void SetStamina(float ammount);
+
+	UFUNCTION()
+	void DecreaseStats();
+
+	// Resources related functions
+	UFUNCTION()
+	void GiveResource(float amount, FString resourceType);
 };
