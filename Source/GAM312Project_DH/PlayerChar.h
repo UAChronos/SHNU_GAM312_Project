@@ -7,6 +7,7 @@
 #include "GameFramework/Character.h"
 #include "Kismet/GameplayStatics.h"
 #include "Resource_M.h"
+#include "BuildingPart.h"
 #include "PlayerChar.generated.h"
 
 UCLASS()
@@ -65,6 +66,22 @@ public:
 	UPROPERTY(EditAnywhere, Category = "HitMarker")
 	UMaterialInterface* hitDecal;
 
+	// Array holding all building parts available to spawn/build
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Building Supplies")
+	TArray<int> BuildingArray;
+
+	// Building mode indicator
+	UPROPERTY()
+	bool isBuilding;
+
+	// Parent class of the spawned part
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
+	TSubclassOf<ABuildingPart> BuildPartClass;
+
+	// Builing part that is spawned
+	UPROPERTY()
+	ABuildingPart* spawnedPart;
+
 	// Movement functions
 	UFUNCTION()
 	void MoveForward(float axisValue);
@@ -98,4 +115,14 @@ public:
 	// Resources related functions
 	UFUNCTION()
 	void GiveResource(float amount, FString resourceType);
+
+	// Building related functions
+	UFUNCTION(BlueprintCallable)
+	void UpdateResources(float woodAmount, float stoneAmount, FString buildingObject);
+
+	UFUNCTION(BlueprintCallable)
+	void SpawnBuilding(int buildingId, bool& isSuccess);
+
+	UFUNCTION()
+	void RotateBuilding();
 };

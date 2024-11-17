@@ -23,6 +23,9 @@ APlayerChar::APlayerChar()
 	ResourcesNameArray.Add(TEXT("Wood"));
 	ResourcesNameArray.Add(TEXT("Stone"));
 	ResourcesNameArray.Add(TEXT("Berry"));
+
+	// Intialize building parts array with 3 elements in it
+	BuildingArray.SetNum(3);
 }
 
 // Called when the game starts or when spawned
@@ -42,6 +45,17 @@ void APlayerChar::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
+	// If the player is in building mode and the selected building part is valid, update the position of the building part to align with the player's line of sight
+	if (isBuilding)
+	{
+		if (spawnedPart)
+		{
+			FVector StartLocation = PlayerCamComp->GetComponentLocation();
+			FVector Direction = PlayerCamComp->GetForwardVector() * 400.0f;
+			FVector EndLocation = StartLocation + Direction;
+			spawnedPart->SetActorLocation(EndLocation);
+		}
+	}
 }
 
 // Called to bind functionality to input
@@ -59,6 +73,7 @@ void APlayerChar::SetupPlayerInputComponent(UInputComponent* PlayerInputComponen
 	PlayerInputComponent->BindAction("JumpEvent", IE_Pressed, this, &APlayerChar::StartJump);
 	PlayerInputComponent->BindAction("JumpEvent", IE_Released, this, &APlayerChar::StopJump);
 	PlayerInputComponent->BindAction("Interact", IE_Pressed, this, &APlayerChar::FindObject);
+	PlayerInputComponent->BindAction("RotatePart", IE_Pressed, this, &APlayerChar::RotateBuilding);
 }
 
 void APlayerChar::MoveForward(float axisValue)
@@ -114,8 +129,8 @@ void APlayerChar::FindObject()
 	// Return face index of the object hit
 	QueryParams.bReturnFaceIndex = true;
 
-	// Perform line trace
-	if (GetWorld()->LineTraceSingleByChannel(HitResult, StartLocation, EndLocation, ECC_Visibility, QueryParams))
+	// If player is not in building mode - perform line trace
+	if (!isBuilding && GetWorld()->LineTraceSingleByChannel(HitResult, StartLocation, EndLocation, ECC_Visibility, QueryParams))
 	{
 		// Cast object hit to resource
 		AResource_M* HitResource = Cast<AResource_M>(HitResult.GetActor());
@@ -142,7 +157,7 @@ void APlayerChar::FindObject()
 
 				// Spawn decal of size 10 at line trace hit location
 				UGameplayStatics::SpawnDecalAtLocation(GetWorld(), hitDecal, FVector(10.0f, 10.0f, 10.0f), HitResult.Location, FRotator(-90, 0, 0), 2.0f);
-				
+
 				// Consume stamina
 				SetStamina(-5.0f);
 			}
@@ -157,6 +172,11 @@ void APlayerChar::FindObject()
 				}
 			}
 		}
+	}
+	else
+	{
+		// Disable building mode when Interact action is triggered
+		isBuilding = false;
 	}
 }
 
@@ -234,6 +254,78 @@ void APlayerChar::GiveResource(float amount, FString resourceType)
 	else if (resourceType == "Berry")
 	{
 		ResourcesArray[2] = ResourcesArray[2] + amount;
+	}
+}
+
+// Function used to update player resources and building parts when crafting
+void APlayerChar::UpdateResources(float woodAmount, float stoneAmount, FString buildingObject)
+{
+	// Check if player has enough resources to craft building part
+	if (woodAmount <= ResourcesArray[0] && stoneAmount <= ResourcesArray[1])
+	{
+		// Subtract building part cost from player resources
+		ResourcesArray[0] = ResourcesArray[0] - woodAmount;
+		ResourcesArray[1] = ResourcesArray[1] - stoneAmount;
+
+		// Increment amount of repective building part that player has
+		if (buildingObject == "Wall")
+		{
+			BuildingArray[0] += 1;
+		}
+		else if (buildingObject == "Floor")
+		{
+			BuildingArray[1] += 1;
+		}
+		else if (buildingObject == "Ceiling")
+		{
+			BuildingArray[2] += 1;
+		}
+	}
+}
+
+// Function used to spawn building parts from player inventory
+// isSuccess returns whether an object has been successfully spawned
+void APlayerChar::SpawnBuilding(int buildingId, bool& isSuccess)
+{
+	// If player is not in building mode and has requested building part - proceed to build it
+	if (!isBuilding)
+	{
+		if (BuildingArray[buildingId] >= 1)
+		{
+			// Enter building mode
+			isBuilding = true;
+
+			// Spawn parameters for the part
+			FActorSpawnParameters SpawnParams;
+
+			// Spawn location for the part
+			FVector StartLocation = PlayerCamComp->GetComponentLocation();
+			FVector Direction = PlayerCamComp->GetForwardVector() * 400.0f;
+			FVector EndLocation = StartLocation + Direction;
+
+			// Building part rotation
+			FRotator partRot(0, 0, 0);
+
+			// Decrement amount of repective building part
+			BuildingArray[buildingId] -= 1;
+
+			// Spawn building part at a point where player looks
+			spawnedPart = GetWorld()->SpawnActor<ABuildingPart>(BuildPartClass, EndLocation, partRot, SpawnParams);
+
+			isSuccess = true;
+		}
+
+		isSuccess = false;
+	}
+}
+
+// Function used to rotate building part
+void APlayerChar::RotateBuilding()
+{
+	// Rotate building part if in building mode
+	if (isBuilding)
+	{
+		spawnedPart->AddActorWorldRotation(FRotator(0, 90, 0));
 	}
 }
 
