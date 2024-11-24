@@ -8,6 +8,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "Resource_M.h"
 #include "BuildingPart.h"
+#include "PlayerWidget.h"
 #include "PlayerChar.generated.h"
 
 UCLASS()
@@ -81,6 +82,10 @@ public:
 	// Builing part that is spawned
 	UPROPERTY()
 	ABuildingPart* spawnedPart;
+
+	// Reference to player HUD widget
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPlayerWidget* playerUI;
 
 	// Movement functions
 	UFUNCTION()

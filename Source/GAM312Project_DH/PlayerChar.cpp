@@ -45,6 +45,9 @@ void APlayerChar::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
+	// Update health, hunger, and stamina bars in player HUD
+	playerUI->UpdateBars(Health, Hunger, Stamina);
+
 	// If the player is in building mode and the selected building part is valid, update the position of the building part to align with the player's line of sight
 	if (isBuilding)
 	{
