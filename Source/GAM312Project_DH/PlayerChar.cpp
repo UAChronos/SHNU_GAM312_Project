@@ -38,6 +38,13 @@ void APlayerChar::BeginPlay()
 
 	// Initialize timer and call DecreaseStats function each 2 seconds
 	GetWorld()->GetTimerManager().SetTimer(StatsTimerHandle, this, &APlayerChar::DecreaseStats, 2.0f, true);
+
+	// If objectives widget exists, initialize objectives progress with value 0
+	if (objWidget)
+	{
+		objWidget->UpdateBuildObj(0.0f);
+		objWidget->UpdateMatObj(0.0f);
+	}
 }
 
 // Called every frame
@@ -149,6 +156,10 @@ void APlayerChar::FindObject()
 			{
 				GiveResource(resourceValue, hitName);
 
+				// Increase mats collected by resource value and update objectives widget
+				matsCollected += resourceValue;
+				objWidget->UpdateMatObj(matsCollected);
+
 				// Decrease resource reserve by amount retrieved
 				HitResource->totalResource = HitResource->totalResource - resourceValue;
 
@@ -176,10 +187,14 @@ void APlayerChar::FindObject()
 			}
 		}
 	}
-	else
+	else if (isBuilding)
 	{
 		// Disable building mode when Interact action is triggered
 		isBuilding = false;
+
+		// Increase objects built by 1 and update objectives widget
+		objectsBuilt += 1.0f;
+		objWidget->UpdateBuildObj(objectsBuilt);
 	}
 }
 
