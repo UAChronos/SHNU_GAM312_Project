@@ -9,6 +9,7 @@
 #include "Resource_M.h"
 #include "BuildingPart.h"
 #include "PlayerWidget.h"
+#include "ObjectiveWidget.h"
 #include "PlayerChar.generated.h"
 
 UCLASS()
@@ -86,6 +87,18 @@ public:
 	// Reference to player HUD widget
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	UPlayerWidget* playerUI;
+
+	// Reference to player objectives widget
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UObjectiveWidget* objWidget;
+
+	// Store number of objects built by player
+	UPROPERTY()
+	float objectsBuilt;
+
+	// Store number of materials collected by player
+	UPROPERTY()
+	float matsCollected;
 
 	// Movement functions
 	UFUNCTION()
