@@ -3,6 +3,8 @@
 
 #include "PlayerChar.h"
 
+#include "Engine/OverlapResult.h"
+
 // Sets default values
 APlayerChar::APlayerChar()
 {
@@ -63,7 +65,60 @@ void APlayerChar::Tick(float DeltaTime)
 			FVector StartLocation = PlayerCamComp->GetComponentLocation();
 			FVector Direction = PlayerCamComp->GetForwardVector() * 400.0f;
 			FVector EndLocation = StartLocation + Direction;
-			spawnedPart->SetActorLocation(EndLocation);
+
+			if (enableBuildingSnapping)
+			{
+				// Setup overlap sphere
+				TArray<FOverlapResult> OverlapResults;
+				float SphereRadius = 100.0f;
+				FCollisionShape CollisionShape = FCollisionShape::MakeSphere(SphereRadius);
+
+				bool bOverlap = GetWorld()->OverlapMultiByChannel(OverlapResults, EndLocation, FQuat::Identity, ECC_OverlapAll_Deprecated, CollisionShape);
+
+				if (bOverlap)
+				{
+					double distanceToClosestSocket = std::numeric_limits<double>::max();
+					UArrowComponent* closestSocket = nullptr;
+
+					for (const FOverlapResult& Overlap : OverlapResults)
+					{
+						AActor* OverlappingActor = Overlap.GetActor();
+
+						ABuildingPart* OverlappedBuildingPart = Cast<ABuildingPart>(OverlappingActor);
+
+						if (OverlappedBuildingPart)
+						{
+							for (UArrowComponent* attachmentSocket : OverlappedBuildingPart->AttachmentSockets)
+							{
+								double distanceToSocket = (EndLocation - attachmentSocket->GetComponentLocation()).Length();
+
+								if (distanceToSocket < distanceToClosestSocket)
+								{
+									distanceToClosestSocket = distanceToSocket;
+									closestSocket = attachmentSocket;
+								}
+							}
+						}
+					}
+
+					// If found closest socket
+					if (closestSocket != nullptr)
+					{
+						// Snap building part to a socket
+						spawnedPart->SetActorLocation(closestSocket->GetComponentLocation());
+					}
+					else
+					{
+						// Update building part freely since socket was not found
+						spawnedPart->SetActorLocation(EndLocation);
+					}
+				}
+			}
+			else
+			{
+				// Update building part location
+				spawnedPart->SetActorLocation(EndLocation);
+			}
 		}
 	}
 }
@@ -191,6 +246,9 @@ void APlayerChar::FindObject()
 	{
 		// Disable building mode when Interact action is triggered
 		isBuilding = false;
+
+		// Enable building part collision when exiting building mode
+		spawnedPart->SetActorEnableCollision(true);
 
 		// Increase objects built by 1 and update objectives widget
 		objectsBuilt += 1.0f;
@@ -329,6 +387,9 @@ void APlayerChar::SpawnBuilding(int buildingId, bool& isSuccess)
 
 			// Spawn building part at a point where player looks
 			spawnedPart = GetWorld()->SpawnActor<ABuildingPart>(BuildPartClass, EndLocation, partRot, SpawnParams);
+
+			// Disable building part collision in building mode
+			spawnedPart->SetActorEnableCollision(false);
 
 			isSuccess = true;
 		}

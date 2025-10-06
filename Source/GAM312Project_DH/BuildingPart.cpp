@@ -2,6 +2,7 @@
 
 
 #include "BuildingPart.h"
+#include <string>
 
 // Sets default values
 ABuildingPart::ABuildingPart()
@@ -18,6 +19,13 @@ ABuildingPart::ABuildingPart()
 
 	// Attach mesh component to the pivot arrow
 	Mesh->SetupAttachment(PivotArrow);
+
+	for (int i = 0; i < 8; i++)
+	{
+		UArrowComponent* attachmentSocket = CreateDefaultSubobject<UArrowComponent>(FName(*FString::Printf(TEXT("AttachmentSocket%d"), i)));
+		attachmentSocket->SetupAttachment(RootComponent);
+		AttachmentSockets.Add(attachmentSocket);
+	}
 }
 
 // Called when the game starts or when spawned
@@ -32,5 +40,6 @@ void ABuildingPart::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
+	PivotArrow->GetComponentLocation();
 }
 

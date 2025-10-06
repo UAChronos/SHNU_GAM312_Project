@@ -76,6 +76,10 @@ public:
 	UPROPERTY()
 	bool isBuilding;
 
+	// Controls if snapping to other building parts is enabled in building mode (enabled by default)
+	UPROPERTY()
+	bool enableBuildingSnapping = true;
+
 	// Parent class of the spawned part
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
 	TSubclassOf<ABuildingPart> BuildPartClass;

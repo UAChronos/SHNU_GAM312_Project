@@ -31,4 +31,8 @@ public:
 	// Pivot object used as origin for building part
 	UPROPERTY(EditAnywhere)
     UArrowComponent* PivotArrow;
+
+	// Array of arrows used as building part attachment sockets
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Attachment Sockets")
+	TArray<UArrowComponent*> AttachmentSockets;
 };
