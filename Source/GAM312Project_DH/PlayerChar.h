@@ -147,4 +147,7 @@ public:
 
 	UFUNCTION()
 	void RotateBuilding();
+
+	UFUNCTION()
+	void DestroyBuildingPart();
 };

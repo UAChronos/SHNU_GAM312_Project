@@ -139,6 +139,7 @@ void APlayerChar::SetupPlayerInputComponent(UInputComponent* PlayerInputComponen
 	PlayerInputComponent->BindAction("JumpEvent", IE_Released, this, &APlayerChar::StopJump);
 	PlayerInputComponent->BindAction("Interact", IE_Pressed, this, &APlayerChar::FindObject);
 	PlayerInputComponent->BindAction("RotatePart", IE_Pressed, this, &APlayerChar::RotateBuilding);
+	PlayerInputComponent->BindAction("DestroyBuildingPart", IE_Pressed, this, &APlayerChar::DestroyBuildingPart);
 }
 
 void APlayerChar::MoveForward(float axisValue)
@@ -356,6 +357,10 @@ void APlayerChar::UpdateResources(float woodAmount, float stoneAmount, FString b
 		{
 			BuildingArray[2] += 1;
 		}
+		else if (buildingObject == "Doorway")
+		{
+			BuildingArray[3] += 1;
+		}
 	}
 }
 
@@ -405,6 +410,42 @@ void APlayerChar::RotateBuilding()
 	if (isBuilding)
 	{
 		spawnedPart->AddActorWorldRotation(FRotator(0, 90, 0));
+	}
+}
+
+void APlayerChar::DestroyBuildingPart()
+{
+	// Setup hitscan: use player camera position as starting point, view direction multiplied by 800 (length of the line) as line trace direction, and calculate end location using theses values
+	FHitResult HitResult;
+	FVector StartLocation = PlayerCamComp->GetComponentLocation();
+	FVector Direction = PlayerCamComp->GetForwardVector() * 800.0f;
+	FVector EndLocation = StartLocation + Direction;
+
+	// Collsion query parameters
+	FCollisionQueryParams QueryParams;
+	// Ignore hits on player
+	QueryParams.AddIgnoredActor(this);
+	// Include complex collisions
+	QueryParams.bTraceComplex = true;
+	// Return face index of the object hit
+	QueryParams.bReturnFaceIndex = true;
+
+	// Draw debug
+	//const FName TraceTag("MyTraceTag");
+	//GetWorld()->DebugDrawTraceTag = TraceTag;
+	//QueryParams.TraceTag = TraceTag;
+
+	if (GetWorld()->LineTraceSingleByChannel(HitResult, StartLocation, EndLocation, ECC_Visibility, QueryParams))
+	{
+		// Cast object hit to building part
+		ABuildingPart* HitBuildingPart = Cast<ABuildingPart>(HitResult.GetActor());
+
+		// Check if cast was successful
+		if (HitBuildingPart)
+		{
+			// Execute building part destroy procedure
+			HitBuildingPart->DestroyProcedure();
+		}
 	}
 }
 
