@@ -3,6 +3,8 @@
 
 #include "PlayerChar.h"
 
+#include "Engine/OverlapResult.h"
+
 // Sets default values
 APlayerChar::APlayerChar()
 {
@@ -63,7 +65,60 @@ void APlayerChar::Tick(float DeltaTime)
 			FVector StartLocation = PlayerCamComp->GetComponentLocation();
 			FVector Direction = PlayerCamComp->GetForwardVector() * 400.0f;
 			FVector EndLocation = StartLocation + Direction;
-			spawnedPart->SetActorLocation(EndLocation);
+
+			if (enableBuildingSnapping)
+			{
+				// Setup overlap sphere
+				TArray<FOverlapResult> OverlapResults;
+				float SphereRadius = 100.0f;
+				FCollisionShape CollisionShape = FCollisionShape::MakeSphere(SphereRadius);
+
+				bool bOverlap = GetWorld()->OverlapMultiByChannel(OverlapResults, EndLocation, FQuat::Identity, ECC_OverlapAll_Deprecated, CollisionShape);
+
+				if (bOverlap)
+				{
+					double distanceToClosestSocket = std::numeric_limits<double>::max();
+					UArrowComponent* closestSocket = nullptr;
+
+					for (const FOverlapResult& Overlap : OverlapResults)
+					{
+						AActor* OverlappingActor = Overlap.GetActor();
+
+						ABuildingPart* OverlappedBuildingPart = Cast<ABuildingPart>(OverlappingActor);
+
+						if (OverlappedBuildingPart)
+						{
+							for (UArrowComponent* attachmentSocket : OverlappedBuildingPart->AttachmentSockets)
+							{
+								double distanceToSocket = (EndLocation - attachmentSocket->GetComponentLocation()).Length();
+
+								if (distanceToSocket < distanceToClosestSocket)
+								{
+									distanceToClosestSocket = distanceToSocket;
+									closestSocket = attachmentSocket;
+								}
+							}
+						}
+					}
+
+					// If found closest socket
+					if (closestSocket != nullptr)
+					{
+						// Snap building part to a socket
+						spawnedPart->SetActorLocation(closestSocket->GetComponentLocation());
+					}
+					else
+					{
+						// Update building part freely since socket was not found
+						spawnedPart->SetActorLocation(EndLocation);
+					}
+				}
+			}
+			else
+			{
+				// Update building part location
+				spawnedPart->SetActorLocation(EndLocation);
+			}
 		}
 	}
 }
@@ -84,6 +139,7 @@ void APlayerChar::SetupPlayerInputComponent(UInputComponent* PlayerInputComponen
 	PlayerInputComponent->BindAction("JumpEvent", IE_Released, this, &APlayerChar::StopJump);
 	PlayerInputComponent->BindAction("Interact", IE_Pressed, this, &APlayerChar::FindObject);
 	PlayerInputComponent->BindAction("RotatePart", IE_Pressed, this, &APlayerChar::RotateBuilding);
+	PlayerInputComponent->BindAction("DestroyBuildingPart", IE_Pressed, this, &APlayerChar::DestroyBuildingPart);
 }
 
 void APlayerChar::MoveForward(float axisValue)
@@ -192,6 +248,9 @@ void APlayerChar::FindObject()
 		// Disable building mode when Interact action is triggered
 		isBuilding = false;
 
+		// Enable building part collision when exiting building mode
+		spawnedPart->SetActorEnableCollision(true);
+
 		// Increase objects built by 1 and update objectives widget
 		objectsBuilt += 1.0f;
 		objWidget->UpdateBuildObj(objectsBuilt);
@@ -298,6 +357,10 @@ void APlayerChar::UpdateResources(float woodAmount, float stoneAmount, FString b
 		{
 			BuildingArray[2] += 1;
 		}
+		else if (buildingObject == "Doorway")
+		{
+			BuildingArray[3] += 1;
+		}
 	}
 }
 
@@ -330,6 +393,9 @@ void APlayerChar::SpawnBuilding(int buildingId, bool& isSuccess)
 			// Spawn building part at a point where player looks
 			spawnedPart = GetWorld()->SpawnActor<ABuildingPart>(BuildPartClass, EndLocation, partRot, SpawnParams);
 
+			// Disable building part collision in building mode
+			spawnedPart->SetActorEnableCollision(false);
+
 			isSuccess = true;
 		}
 
@@ -344,6 +410,42 @@ void APlayerChar::RotateBuilding()
 	if (isBuilding)
 	{
 		spawnedPart->AddActorWorldRotation(FRotator(0, 90, 0));
+	}
+}
+
+void APlayerChar::DestroyBuildingPart()
+{
+	// Setup hitscan: use player camera position as starting point, view direction multiplied by 800 (length of the line) as line trace direction, and calculate end location using theses values
+	FHitResult HitResult;
+	FVector StartLocation = PlayerCamComp->GetComponentLocation();
+	FVector Direction = PlayerCamComp->GetForwardVector() * 800.0f;
+	FVector EndLocation = StartLocation + Direction;
+
+	// Collsion query parameters
+	FCollisionQueryParams QueryParams;
+	// Ignore hits on player
+	QueryParams.AddIgnoredActor(this);
+	// Include complex collisions
+	QueryParams.bTraceComplex = true;
+	// Return face index of the object hit
+	QueryParams.bReturnFaceIndex = true;
+
+	// Draw debug
+	//const FName TraceTag("MyTraceTag");
+	//GetWorld()->DebugDrawTraceTag = TraceTag;
+	//QueryParams.TraceTag = TraceTag;
+
+	if (GetWorld()->LineTraceSingleByChannel(HitResult, StartLocation, EndLocation, ECC_Visibility, QueryParams))
+	{
+		// Cast object hit to building part
+		ABuildingPart* HitBuildingPart = Cast<ABuildingPart>(HitResult.GetActor());
+
+		// Check if cast was successful
+		if (HitBuildingPart)
+		{
+			// Execute building part destroy procedure
+			HitBuildingPart->DestroyProcedure();
+		}
 	}
 }
 

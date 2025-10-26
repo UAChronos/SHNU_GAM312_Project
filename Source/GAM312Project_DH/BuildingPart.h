@@ -31,4 +31,16 @@ public:
 	// Pivot object used as origin for building part
 	UPROPERTY(EditAnywhere)
     UArrowComponent* PivotArrow;
+
+	// Array of arrows used as building part attachment sockets
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Attachment Sockets")
+	TArray<UArrowComponent*> AttachmentSockets;
+
+	// Determines if part can be destroyed. During process of being destroyed set to false
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	bool CanBeDestroyed = true;
+
+	// Executes building part destroy procedure
+	UFUNCTION()
+	void DestroyProcedure();
 };
